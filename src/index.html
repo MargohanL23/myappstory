@@ -1,21 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MyStory App</title>
-  
-  <!-- KRITIS: Link Manifest agar PWA dapat diinstal. -->
-  <!-- File ini akan dicopy ke root folder docs/ oleh Webpack. -->
-  <link rel="manifest" href="./manifest.json">
-  
-  <!-- NOTE: CSS dan JS akan di-inject otomatis oleh Webpack. -->
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyStory App</title>
+    
+    <!-- KRITIS: Memastikan manifest menunjuk ke base path yang benar -->
+    <link rel="manifest" href="/myappstory/manifest.json">
+    
+    <!-- KRITIS: Menghapus atau Mengoreksi link favicon/icon lama jika ada -->
+    <!-- Jika kamu memiliki link icon secara manual, pastikan path-nya benar (misalnya icon1.png) -->
+    <link rel="icon" href="/myappstory/icons/icon1.png"> 
+
+    <!-- Tambahan: memastikan tema dan Apple icon (jika perlu) -->
+    <meta name="theme-color" content="#673AB7"/>
+    <link rel="apple-touch-icon" href="/myappstory/icons/icon1.png">
+    
+    <!-- Registrasi Service Worker -->
+    <script>
+      // Fungsi untuk mendaftarkan Service Worker
+      function registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+          // Path harus menunjuk ke file SW di root docs/
+          navigator.serviceWorker.register('/myappstory/service-worker.js')
+            .then(registration => {
+              console.log('ServiceWorker registered:', registration);
+            })
+            .catch(error => {
+              console.error('ServiceWorker registration failed:', error);
+            });
+        }
+      }
+
+      // Jalankan registrasi setelah halaman dimuat
+      window.addEventListener('load', registerServiceWorker);
+    </script>
 </head>
-
 <body>
-  <!-- Root SPA -->
-  <div id="app"></div>
-
-  <!-- Webpack akan menyisipkan <script src="bundle.js"> di sini secara otomatis. -->
+    <div id="app"></div>
 </body>
 </html>
