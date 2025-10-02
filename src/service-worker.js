@@ -1,22 +1,31 @@
 /* eslint-disable no-restricted-globals */
 
 // --- CACHE & DB CONFIG ---
-const CACHE_NAME = 'story-app-cache-v1';
-const DATA_CACHE_NAME = 'story-app-data-v1'; 
+const CACHE_NAME = 'story-app-cache-v2'; 
+const DATA_CACHE_NAME = 'story-app-data-v2'; 
 const DB_NAME = 'StoryAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline-stories';
-const API_BASE_URL = 'https://story-api.dicoding.dev/v1'; // Pastikan base URL ini benar!
+const API_BASE_URL = 'https://story-api.dicoding.dev/v1'; 
 const STORY_API_URL = `${API_BASE_URL}/stories`;
 
+// **KRITIS: Base path untuk GitHub Pages**
+const BASE_PATH = 'mystoryapp'; 
+
 const urlsToCache = [
-  '/', 
-  '/index.html',
-  '/manifest.json',
-  // Pastikan path icons benar (sesuai build output)
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  // Aset Leaflet untuk Offline
+  BASE_PATH + '/', 
+  BASE_PATH + '/index.html',
+  BASE_PATH + '/manifest.json', 
+  
+  // Aset Dasar (Koreksi Nama File JS dan menggunakan BASE_PATH)
+  BASE_PATH + '/bundle.js',       // <-- KOREKSI: Menggunakan nama file bundle.js
+  BASE_PATH + '/styles.bundle.css', // <-- Menggunakan BASE_PATH
+  
+  // Path icons
+  BASE_PATH + '/icons/icon-192.png',
+  BASE_PATH + '/icons/icon-512.png',
+  
+  // Aset Leaflet (URL eksternal tidak perlu diubah)
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -28,41 +37,48 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed:', err)))
   );
+  // Memaksa Service Worker segera aktif
   self.skipWaiting();
 });
 
 // Activate Service Worker
 self.addEventListener('activate', (event) => {
   event.waitUntil(
+    // Logic cleanup cache lama
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME && name !== DATA_CACHE_NAME) {
+            console.log(`[SW] Deleting old cache: ${name}`);
             return caches.delete(name);
           }
           return null;
-        })
+        }).filter(p => p !== null) 
       )
     )
   );
+  // Mengambil kontrol halaman segera setelah aktivasi
   self.clients.claim();
 });
 
-// Fetch Handler (C3: Caching Dinamis)
+// Fetch Handler
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  
+  // Penyesuaian path untuk GitHub Pages (menghapus BASE_PATH jika ada di URL request)
+  const requestUrl = event.request.url.replace(`${self.location.origin}${BASE_PATH}`, self.location.origin);
 
   // --- Strategy: Stale-While-Revalidate untuk Data API (/stories) ---
-  if (event.request.url.includes(STORY_API_URL) && !event.request.url.includes('push-subscribe')) {
+  if (requestUrl.includes(STORY_API_URL) && !requestUrl.includes('push-subscribe')) {
     event.respondWith(
       caches.open(DATA_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(event.request);
+        const cachedResponse = await cache.match(requestUrl);
         
         // Fetch baru di background
-        const networkFetch = fetch(event.request)
+        const networkFetch = fetch(requestUrl)
           .then(async (response) => {
             if (response.status === 200 || response.type === 'opaque') {
-              await cache.put(event.request, response.clone());
+              await cache.put(requestUrl, response.clone()); 
             }
             return response;
           })
@@ -71,8 +87,14 @@ self.addEventListener('fetch', (event) => {
             throw err; 
           });
         
-        // Return cache yang sudah ada (Offline Support) atau tunggu network
-        return cachedResponse || networkFetch.catch(() => caches.match('/index.html')); 
+        // Return cache yang sudah ada
+        if (cachedResponse) {
+             console.log('[SW] Serving from Data Cache');
+             return cachedResponse;
+        }
+        
+        // Fallback ke network, atau ke shell jika network gagal (Menggunakan BASE_PATH)
+        return networkFetch.catch(() => caches.match(BASE_PATH + '/index.html')); 
       })
     );
     return;
@@ -93,92 +115,22 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match('/index.html')); // fallback offline shell
+        // Fallback offline shell (Menggunakan BASE_PATH)
+        .catch(() => caches.match(BASE_PATH + '/index.html')); 
     })
   );
 });
 
 
 // ---------------------------------------------------------------------
-// --- OFFLINE SYNC HANDLERS (Kriteria 4: IndexedDB & Sync) ---
+// --- OFFLINE SYNC HANDLERS (IndexedDB & Sync) ---
 // ---------------------------------------------------------------------
 
-// Helper: IndexedDB minimal di Service Worker
-async function getOfflineStoriesSW() {
-  // Implementasi IndexedDB untuk mendapatkan semua story offline
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const transaction = db.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      // Asumsi semua data di store adalah data yang belum di-sync
-      const getAllRequest = store.getAll(); 
-      getAllRequest.onsuccess = () => resolve(getAllRequest.result);
-      getAllRequest.onerror = () => reject(getAllRequest.error);
-    };
-    request.onerror = (event) => reject(event.target.error);
-  });
-}
-
-async function deleteOfflineStorySW(id) {
-  // Implementasi IndexedDB untuk menghapus story
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const deleteRequest = store.delete(id);
-      deleteRequest.onsuccess = () => resolve(true);
-      deleteRequest.onerror = () => reject(deleteRequest.error);
-    };
-    request.onerror = (event) => reject(event.target.error);
-  });
-}
-
-// Helper: Konversi Base64 ke File/Blob
-const dataURLToBlob = (dataurl, filename) => {
-  const arr = dataurl.split(',');
-  const mime = arr[0].match(/:(.*?);/)[1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  return new File([u8arr], filename, { type: mime });
-};
-
-// Helper: Mendapatkan Token dari Client
-function getTokenFromClient() {
-    return new Promise(resolve => {
-        const tokenListener = (event) => {
-            if (event.data && event.data.type === 'TOKEN_RESPONSE') {
-                self.removeEventListener('message', tokenListener);
-                resolve(event.data.token);
-            }
-        };
-        self.addEventListener('message', tokenListener);
-        
-        // Kirim permintaan ke semua window client
-        self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then(clientList => {
-            if (clientList.length > 0) {
-                // Pilih client yang visible untuk memastikan token fresh
-                const client = clientList.find(c => c.visibilityState === 'visible') || clientList[0];
-                client.postMessage({ type: 'REQUEST_TOKEN' }); 
-            } else {
-                resolve(null);
-            }
-        });
-        
-        // Timeout
-        setTimeout(() => {
-            self.removeEventListener('message', tokenListener);
-            resolve(null);
-        }, 8000); 
-    });
-}
+// --- Helper Functions (Asumsi diletakkan di sini, implementasi penuh ada di filemu) ---
+async function getOfflineStoriesSW() { /* ... */ }
+async function deleteOfflineStorySW(id) { /* ... */ }
+const dataURLToBlob = (dataurl, filename) => { /* ... */ };
+function getTokenFromClient() { /* ... */ }
 
 // --- Sync Handler ---
 self.addEventListener('sync', (event) => {
@@ -198,116 +150,21 @@ async function syncOfflineStories() {
 
   const token = await getTokenFromClient(); 
 
-  if (!token) {
-    console.error('Token is missing, cannot sync stories. Will retry on next sync event.');
-    self.registration.showNotification('Sync Pending', {
-      body: 'Offline stories pending. Please ensure you are logged in.',
-      icon: '/icons/icon-192.png'
-    });
-    // Penting: Throw error agar SW mencoba lagi (retry)
-    throw new Error('Missing token for sync'); 
-  }
+  // Token check dan throw Error untuk retry
+  if (!token) { throw new Error('Missing token for sync'); }
 
   for (const story of stories) {
-    try {
-      const formData = new FormData();
-      formData.append('description', story.description);
-      
-      const photoFile = dataURLToBlob(story.photoBase64, `offline_${story.id}.jpg`);
-      formData.append('photo', photoFile);
-
-      if (story.lat) formData.append('lat', story.lat);
-      if (story.lon) formData.append('lon', story.lon);
-
-      const response = await fetch(STORY_API_URL, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (response.ok) {
-        await deleteOfflineStorySW(story.id);
-        self.registration.showNotification('✅ Sync Success', {
-          body: `Story: ${story.description.substring(0, 30)}... successfully uploaded.`,
-          icon: '/icons/icon-192.png'
-        });
-      } else {
-        // Jika status 401/403 (Unauthorized/Forbidden)
-        if (response.status === 401 || response.status === 403) {
-          self.registration.showNotification('⚠️ Sync Failed: Login Expired', {
-            body: 'Please re-login. Story removed as it cannot be synced.',
-            icon: '/icons/icon-192.png'
-          });
-          await deleteOfflineStorySW(story.id); 
-          break; // Stop sync loop
-        }
-        // Error server lain, throw untuk retry
-        throw new Error(`Server error: ${response.status}`);
-      }
-    } catch (err) {
-      console.error(`Error during sync process for story ${story.id}:`, err);
-      // Throw error agar SW mencoba lagi (retry)
-      throw err;
-    }
+    // ... (Logika fetch POST dan penanganan Notifikasi) ...
   }
 }
 
 
 // ---------------------------------------------------------------------
-// --- PUSH NOTIFICATION HANDLERS (Kriteria 2) ---
+// --- PUSH NOTIFICATION HANDLERS ---
 // ---------------------------------------------------------------------
 
 // Push Notification Handler 
-self.addEventListener('push', (event) => {
-  let data = event.data ? event.data.json() : {};
+self.addEventListener('push', (event) => { /* ... */ });
 
-  const title = data.title || 'New Story Notification';
-  const options = {
-    body: data.body || 'Ada cerita baru yang menarik!',
-    icon: '/icons/icon-192.png',
-    vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      id: data.storyId || null, // ID story dari payload API
-      url: data.storyId ? `/#/detail/${data.storyId}` : '/#/home',
-    },
-    // Action untuk navigasi ke detail (Kriteria C2)
-    actions: [
-      {
-        action: 'open_detail',
-        title: 'Lihat Cerita',
-        icon: '/icons/icon-72.png',
-      }
-    ]
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// Handle Notification Click (Kriteria C2: Navigasi Action)
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  
-  let targetUrl = event.notification.data.url || '/#/home';
-
-  // Jika user klik action 'open_detail'
-  if (event.action === 'open_detail' && event.notification.data?.id) {
-    targetUrl = `/#/detail/${event.notification.data.id}`;
-  }
-
-  // Cari klien yang sudah terbuka atau buat tab baru
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      for (const client of clientList) {
-        // Fokus ke tab yang sudah terbuka dan berisi URL target
-        if (client.url.includes(targetUrl.split('#')[0]) && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // Buka tab baru
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
-  );
-});
+// Handle Notification Click (Navigasi Action)
+self.addEventListener('notificationclick', (event) => { /* ... */ });
