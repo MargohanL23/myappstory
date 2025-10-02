@@ -5,7 +5,9 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: "./src/scripts/app.js",
   output: {
-    // Output ke folder 'docs/' sesuai kebutuhan GitHub Pages
+    // KRITIS: Menentukan publicPath agar semua aset yang di-link (JS/CSS) 
+    // menggunakan base path repo '/myappstory/'
+    publicPath: '/myappstory/', 
     path: path.resolve(__dirname, "docs"), 
     filename: "bundle.js",
     clean: true,
@@ -17,7 +19,6 @@ module.exports = {
     compress: true,
     port: 3000,
     open: true,
-    // Menghindari 404 saat navigasi di dev
     historyApiFallback: {
       index: 'index.html',
     }
@@ -34,9 +35,10 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: "./src/index.html",
       filename: "index.html",
+      // Pastikan injection diaktifkan
+      inject: true, 
     }),
     
-    // KRITIS: Menyalin aset statis (SW dan Manifest) ke folder docs/
     new CopyWebpackPlugin({
       patterns: [
         {
@@ -45,12 +47,10 @@ module.exports = {
           to: path.resolve(__dirname, 'docs/service-worker.js'),
         },
         {
-          // Copy Manifest (sudah dikoreksi path sumbernya)
+          // Copy Manifest (path sumber sudah dikoreksi)
           from: path.resolve(__dirname, 'src/public/manifest.json'), 
           to: path.resolve(__dirname, 'docs/manifest.json'),
         },
-        // CATATAN: Path icons telah dihapus karena menyebabkan "unable to locate" error.
-        // Jika kamu ingin menyalin icons, pastikan kamu membuat folder src/public/icons terlebih dahulu.
       ],
     }),
   ],
