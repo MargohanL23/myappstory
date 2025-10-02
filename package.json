@@ -10,6 +10,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.0",
     "style-loader": "^4.0.0",

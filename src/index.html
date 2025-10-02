@@ -4,17 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MyStory App</title>
-  <!-- NOTE:
-       - CSS (including ./styles/main.css and leaflet/dist/leaflet.css) dibundle/import melalui JS (webpack).
-       - Jangan tambahkan link ke bundled CSS di sini (menghindari MIME/Integrity errors).
-  -->
+  
+  <!-- KRITIS: Link Manifest agar PWA dapat diinstal. -->
+  <!-- File ini akan dicopy ke root folder docs/ oleh Webpack. -->
+  <link rel="manifest" href="./manifest.json">
+  
+  <!-- NOTE: CSS dan JS akan di-inject otomatis oleh Webpack. -->
 </head>
 
 <body>
   <!-- Root SPA -->
   <div id="app"></div>
 
-  <!-- Script bundle dari Webpack (entry) -->
-  <script type="module" src="./bundle.js"></script>
+  <!-- Webpack akan menyisipkan <script src="bundle.js"> di sini secara otomatis. -->
 </body>
 </html>

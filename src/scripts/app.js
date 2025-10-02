@@ -42,13 +42,14 @@ document.addEventListener('DOMContentLoaded', init);
 // Register service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // ✨ PERBAIKAN KRITIS: Menggunakan path GitHub Pages yang benar.
+    // ✨ PERBAIKAN KRITIS: Menggunakan path GitHub Pages yang absolut dan benar.
     // Repo name adalah: /myappstory
     navigator.serviceWorker.register('/myappstory/service-worker.js')
       .then((registration) => {
         console.log('ServiceWorker registered:', registration);
       })
       .catch((error) => {
+        // Error ini sekarang harusnya hilang karena file SW akan dicopy oleh Webpack
         console.log('ServiceWorker registration failed:', error);
       });
   });
@@ -57,10 +58,8 @@ if ('serviceWorker' in navigator) {
 // Tambahkan Listener untuk Komunikasi SW (Untuk Sync Token)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
-    // Menanggapi permintaan token dari Service Worker
     if (event.data && event.data.type === 'REQUEST_TOKEN') { 
       const token = localStorage.getItem('token');
-      // Mengirim kembali token ke SW
       event.source.postMessage({ type: 'TOKEN_RESPONSE', token: token });
     }
   });
