@@ -42,8 +42,9 @@ document.addEventListener('DOMContentLoaded', init);
 // Register service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Pastikan path ini sesuai dengan nama file SW di root 'dist'
-    navigator.serviceWorker.register('/service-worker.js')
+    // ✨ PERBAIKAN KRITIS: Menggunakan path GitHub Pages yang benar.
+    // Repo name adalah: /myappstory
+    navigator.serviceWorker.register('/myappstory/service-worker.js')
       .then((registration) => {
         console.log('ServiceWorker registered:', registration);
       })

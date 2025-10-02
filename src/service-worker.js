@@ -9,23 +9,23 @@ const STORE_NAME = 'offline-stories';
 const API_BASE_URL = 'https://story-api.dicoding.dev/v1'; 
 const STORY_API_URL = `${API_BASE_URL}/stories`;
 
-// **KRITIS: Base path untuk GitHub Pages**
-const BASE_PATH = 'mystoryapp'; 
+// **PERBAIKAN KRITIS: Base path harus sesuai nama repository baru**
+const BASE_PATH = '/myappstory'; 
 
 const urlsToCache = [
   BASE_PATH + '/', 
   BASE_PATH + '/index.html',
   BASE_PATH + '/manifest.json', 
   
-  // Aset Dasar (Koreksi Nama File JS dan menggunakan BASE_PATH)
-  BASE_PATH + '/bundle.js',       // <-- KOREKSI: Menggunakan nama file bundle.js
-  BASE_PATH + '/styles.bundle.css', // <-- Menggunakan BASE_PATH
+  // Aset Dasar (KRITIS: Nama File JS dan menggunakan BASE_PATH)
+  BASE_PATH + '/bundle.js',       
+  BASE_PATH + '/styles.bundle.css', 
   
   // Path icons
   BASE_PATH + '/icons/icon-192.png',
   BASE_PATH + '/icons/icon-512.png',
   
-  // Aset Leaflet (URL eksternal tidak perlu diubah)
+  // Aset Leaflet (URL eksternal)
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -37,14 +37,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed:', err)))
   );
-  // Memaksa Service Worker segera aktif
   self.skipWaiting();
 });
 
 // Activate Service Worker
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    // Logic cleanup cache lama
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames.map((name) => {
@@ -57,7 +55,6 @@ self.addEventListener('activate', (event) => {
       )
     )
   );
-  // Mengambil kontrol halaman segera setelah aktivasi
   self.clients.claim();
 });
 
@@ -65,7 +62,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
-  // Penyesuaian path untuk GitHub Pages (menghapus BASE_PATH jika ada di URL request)
   const requestUrl = event.request.url.replace(`${self.location.origin}${BASE_PATH}`, self.location.origin);
 
   // --- Strategy: Stale-While-Revalidate untuk Data API (/stories) ---
@@ -74,7 +70,6 @@ self.addEventListener('fetch', (event) => {
       caches.open(DATA_CACHE_NAME).then(async (cache) => {
         const cachedResponse = await cache.match(requestUrl);
         
-        // Fetch baru di background
         const networkFetch = fetch(requestUrl)
           .then(async (response) => {
             if (response.status === 200 || response.type === 'opaque') {
@@ -87,13 +82,12 @@ self.addEventListener('fetch', (event) => {
             throw err; 
           });
         
-        // Return cache yang sudah ada
         if (cachedResponse) {
              console.log('[SW] Serving from Data Cache');
              return cachedResponse;
         }
         
-        // Fallback ke network, atau ke shell jika network gagal (Menggunakan BASE_PATH)
+        // Fallback ke index.html di base path
         return networkFetch.catch(() => caches.match(BASE_PATH + '/index.html')); 
       })
     );
@@ -115,56 +109,13 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        // Fallback offline shell (Menggunakan BASE_PATH)
+        // Fallback offline shell ke index.html di base path
         .catch(() => caches.match(BASE_PATH + '/index.html')); 
     })
   );
 });
 
-
-// ---------------------------------------------------------------------
-// --- OFFLINE SYNC HANDLERS (IndexedDB & Sync) ---
-// ---------------------------------------------------------------------
-
-// --- Helper Functions (Asumsi diletakkan di sini, implementasi penuh ada di filemu) ---
-async function getOfflineStoriesSW() { /* ... */ }
-async function deleteOfflineStorySW(id) { /* ... */ }
-const dataURLToBlob = (dataurl, filename) => { /* ... */ };
-function getTokenFromClient() { /* ... */ }
-
-// --- Sync Handler ---
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-offline-stories') {
-    console.log('SW: Triggering sync-offline-stories');
-    event.waitUntil(syncOfflineStories());
-  }
-});
-
-async function syncOfflineStories() {
-  const stories = await getOfflineStoriesSW().catch((e) => {
-    console.error('Error getting offline stories:', e);
-    return [];
-  });
-  
-  if (stories.length === 0) return;
-
-  const token = await getTokenFromClient(); 
-
-  // Token check dan throw Error untuk retry
-  if (!token) { throw new Error('Missing token for sync'); }
-
-  for (const story of stories) {
-    // ... (Logika fetch POST dan penanganan Notifikasi) ...
-  }
-}
-
-
-// ---------------------------------------------------------------------
-// --- PUSH NOTIFICATION HANDLERS ---
-// ---------------------------------------------------------------------
-
-// Push Notification Handler 
-self.addEventListener('push', (event) => { /* ... */ });
-
-// Handle Notification Click (Navigasi Action)
-self.addEventListener('notificationclick', (event) => { /* ... */ });
+// --- OFFLINE SYNC HANDLERS (Stub) ---
+// ... (Logika getOfflineStoriesSW, syncOfflineStories, dll. Dibiarkan kosong/stub di sini) ...
+// --- PUSH NOTIFICATION HANDLERS (Stub) ---
+// ... (Logika push dan notificationclick Dibiarkan kosong/stub di sini) ...
