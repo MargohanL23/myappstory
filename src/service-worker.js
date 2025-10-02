@@ -1,15 +1,15 @@
 /* eslint-disable no-restricted-globals */
 
 // --- CACHE & DB CONFIG ---
-const CACHE_NAME = 'story-app-cache-v2'; 
-const DATA_CACHE_NAME = 'story-app-data-v2'; 
+const CACHE_NAME = 'story-app-cache-v3'; // Naikkan versi cache
+const DATA_CACHE_NAME = 'story-app-data-v3'; // Naikkan versi cache
 const DB_NAME = 'StoryAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline-stories';
 const API_BASE_URL = 'https://story-api.dicoding.dev/v1'; 
 const STORY_API_URL = `${API_BASE_URL}/stories`;
 
-// **PERBAIKAN KRITIS: Base path harus sesuai nama repository baru**
+// **Base path harus sesuai nama repository**
 const BASE_PATH = '/myappstory'; 
 
 const urlsToCache = [
@@ -19,11 +19,11 @@ const urlsToCache = [
   
   // Aset Dasar (KRITIS: Nama File JS dan menggunakan BASE_PATH)
   BASE_PATH + '/bundle.js',       
-  BASE_PATH + '/styles.bundle.css', 
+  // BASE_PATH + '/styles.bundle.css', // Hapus jika tidak ada file styles.bundle.css
   
-  // Path icons
-  BASE_PATH + '/icons/icon-192.png',
-  BASE_PATH + '/icons/icon-512.png',
+  // KRITIS: Path icons harus sesuai dengan nama file yang kamu buat!
+  BASE_PATH + '/icons/icon1.png', 
+  BASE_PATH + '/icons/icon2.png',
   
   // Aset Leaflet (URL eksternal)
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -35,7 +35,8 @@ const urlsToCache = [
 // Install Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed:', err)))
+    // catch() di sini berguna untuk menghindari kegagalan total instalasi SW
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed (SW installation might be partially failed):', err)))
   );
   self.skipWaiting();
 });
@@ -46,6 +47,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames.map((name) => {
+          // Hanya hapus cache lama yang berbeda versi
           if (name !== CACHE_NAME && name !== DATA_CACHE_NAME) {
             console.log(`[SW] Deleting old cache: ${name}`);
             return caches.delete(name);
@@ -62,19 +64,24 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
+  // Normalisasi URL untuk caching data API
   const requestUrl = event.request.url.replace(`${self.location.origin}${BASE_PATH}`, self.location.origin);
 
   // --- Strategy: Stale-While-Revalidate untuk Data API (/stories) ---
   if (requestUrl.includes(STORY_API_URL) && !requestUrl.includes('push-subscribe')) {
     event.respondWith(
       caches.open(DATA_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(requestUrl);
+        const cachedResponse = await cache.match(event.request); 
         
-        const networkFetch = fetch(requestUrl)
+        const networkFetch = fetch(event.request)
           .then(async (response) => {
+            // KRITIS: Respon dikloning sebelum di-cache.
+            const responseToCache = response.clone(); 
+            
             if (response.status === 200 || response.type === 'opaque') {
-              await cache.put(requestUrl, response.clone()); 
+              await cache.put(event.request, responseToCache); 
             }
+            // Mengembalikan respon asli yang belum dibaca bodynya
             return response;
           })
           .catch((err) => {
@@ -87,7 +94,7 @@ self.addEventListener('fetch', (event) => {
              return cachedResponse;
         }
         
-        // Fallback ke index.html di base path
+        // Fallback ke index.html di base path jika gagal
         return networkFetch.catch(() => caches.match(BASE_PATH + '/index.html')); 
       })
     );
@@ -102,9 +109,11 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(event.request)
         .then((networkResponse) => {
+          const responseToCache = networkResponse.clone();
+          
           if (networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
+              cache.put(event.request, responseToCache);
             });
           }
           return networkResponse;

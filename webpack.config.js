@@ -47,9 +47,14 @@ module.exports = {
           to: path.resolve(__dirname, 'docs/service-worker.js'),
         },
         {
-          // Copy Manifest (path sumber sudah dikoreksi)
+          // Copy Manifest
           from: path.resolve(__dirname, 'src/public/manifest.json'), 
           to: path.resolve(__dirname, 'docs/manifest.json'),
+        },
+        {
+          // Copy Icons
+          from: path.resolve(__dirname, 'src/public/icons'),
+          to: path.resolve(__dirname, 'docs/icons'),
         },
       ],
     }),
