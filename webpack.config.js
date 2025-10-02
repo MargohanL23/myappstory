@@ -51,11 +51,6 @@ module.exports = {
           from: path.resolve(__dirname, 'src/public/manifest.json'), 
           to: path.resolve(__dirname, 'docs/manifest.json'),
         },
-        {
-          // KRITIS: Mengembalikan Copy Icons. PASTIKAN folder ini ada!
-          from: path.resolve(__dirname, 'src/public/icons'),
-          to: path.resolve(__dirname, 'docs/icons'),
-        },
       ],
     }),
   ],
