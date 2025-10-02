@@ -19,7 +19,9 @@ const urlsToCache = [
   
   // Aset Dasar (KRITIS: Nama File JS dan menggunakan BASE_PATH)
   BASE_PATH + '/bundle.js',       
-  BASE_PATH + '/styles.bundle.css', 
+  // Biasanya nama file CSS akan menjadi main.css atau bundle.css (atau tidak ada)
+  // Hapus baris ini jika kamu yakin CSS diinject oleh style-loader
+  // BASE_PATH + '/styles.bundle.css', 
   
   // Path icons
   BASE_PATH + '/icons/icon-192.png',
@@ -35,7 +37,9 @@ const urlsToCache = [
 // Install Service Worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed:', err)))
+    // Tangani error individual, namun biarkan Promise.all() gagal jika ada 404.
+    // Error 404 akan hilang setelah folder icons dibuat.
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed (likely due to 404 in urlsToCache):', err)))
   );
   self.skipWaiting();
 });
@@ -72,10 +76,14 @@ self.addEventListener('fetch', (event) => {
         
         const networkFetch = fetch(requestUrl)
           .then(async (response) => {
+            // KRITIS: Kloning respon di sini. Satu klon untuk cache, satu klon dikembalikan.
+            const responseToCache = response.clone(); 
+            
             if (response.status === 200 || response.type === 'opaque') {
-              await cache.put(requestUrl, response.clone()); 
+              await cache.put(requestUrl, responseToCache); 
             }
-            return response;
+            // Kembalikan response asli (yang bodynya belum dipakai/dikloning)
+            return response; 
           })
           .catch((err) => {
             console.log('[SW] Network failed for API:', err);
@@ -87,7 +95,6 @@ self.addEventListener('fetch', (event) => {
              return cachedResponse;
         }
         
-        // Fallback ke index.html di base path
         return networkFetch.catch(() => caches.match(BASE_PATH + '/index.html')); 
       })
     );
@@ -102,14 +109,15 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(event.request)
         .then((networkResponse) => {
+          const responseToCache = networkResponse.clone();
+          
           if (networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
+              cache.put(event.request, responseToCache);
             });
           }
           return networkResponse;
         })
-        // Fallback offline shell ke index.html di base path
         .catch(() => caches.match(BASE_PATH + '/index.html')); 
     })
   );
