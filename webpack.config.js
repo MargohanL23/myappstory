@@ -1,6 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const CopyWebpackPlugin = require('copy-webpack-plugin'); // <-- Import Copy Plugin
+const CopyWebpackPlugin = require('copy-webpack-plugin'); 
 
 module.exports = {
   entry: "./src/scripts/app.js",
@@ -40,20 +40,17 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         {
-          // Service Worker biasanya di root src/
+          // Copy Service Worker
           from: path.resolve(__dirname, 'src/service-worker.js'),
           to: path.resolve(__dirname, 'docs/service-worker.js'),
         },
         {
-          // PERBAIKAN: Menggunakan src/public/manifest.json sebagai sumber
+          // Copy Manifest (sudah dikoreksi path sumbernya)
           from: path.resolve(__dirname, 'src/public/manifest.json'), 
           to: path.resolve(__dirname, 'docs/manifest.json'),
         },
-        // Path icons juga disesuaikan ke folder public/
-        {
-          from: path.resolve(__dirname, 'src/public/icons'),
-          to: path.resolve(__dirname, 'docs/icons'),
-        },
+        // CATATAN: Path icons telah dihapus karena menyebabkan "unable to locate" error.
+        // Jika kamu ingin menyalin icons, pastikan kamu membuat folder src/public/icons terlebih dahulu.
       ],
     }),
   ],
