@@ -36,7 +36,9 @@ const sendSubscriptionToServer = async (subscription, action) => {
     throw new Error('Unauthorized: No login token found.');
   }
 
-  const endpoint = action === 'subscribe' ? 'push-subscribe' : 'push-unsubscribe';
+  // PERBAIKAN DI SINI: Mengubah 'push-subscribe' menjadi 'subscribe'
+  // dan 'push-unsubscribe' menjadi 'unsubscribe' sesuai API Dicoding.
+  const endpoint = action === 'subscribe' ? 'subscribe' : 'unsubscribe';
 
   try {
     const response = await fetch(`${BASE_URL}/${endpoint}`, {
