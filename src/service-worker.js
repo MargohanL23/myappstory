@@ -1,130 +1,288 @@
 /* eslint-disable no-restricted-globals */
 
 // --- CACHE & DB CONFIG ---
-const CACHE_NAME = 'story-app-cache-v3'; // Naikkan versi cache
-const DATA_CACHE_NAME = 'story-app-data-v3'; // Naikkan versi cache
+const CACHE_NAME = 'story-app-cache-v4';
+const DATA_CACHE_NAME = 'story-app-data-v4';
 const DB_NAME = 'StoryAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline-stories';
-const API_BASE_URL = 'https://story-api.dicoding.dev/v1'; 
+const API_BASE_URL = 'https://story-api.dicoding.dev/v1';
 const STORY_API_URL = `${API_BASE_URL}/stories`;
 
-// **Base path harus sesuai nama repository**
-const BASE_PATH = '/myappstory'; 
-
 const urlsToCache = [
-  BASE_PATH + '/', 
-  BASE_PATH + '/index.html',
-  BASE_PATH + '/manifest.json', 
-  
-  // Aset Dasar (KRITIS: Nama File JS dan menggunakan BASE_PATH)
-  BASE_PATH + '/bundle.js',       
-  // BASE_PATH + '/styles.bundle.css', // Hapus jika tidak ada file styles.bundle.css
-  
-  // KRITIS: Path icons harus sesuai dengan nama file yang kamu buat!
-  BASE_PATH + '/icons/icon1.png', 
-  BASE_PATH + '/icons/icon2.png',
-  
-  // Aset Leaflet (URL eksternal)
+  '/', 
+  '/index.html',
+  '/manifest.json',
+  '/bundle.js',
+  '/icons/icon1.png',
+  '/icons/icon2.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
 ];
 
-// Install Service Worker
+// === INSTALL SERVICE WORKER ===
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...');
   event.waitUntil(
-    // catch() di sini berguna untuk menghindari kegagalan total instalasi SW
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache).catch((err) => console.log('Cache add failed (SW installation might be partially failed):', err)))
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[SW] Caching app shell');
+        return cache.addAll(urlsToCache);
+      })
+      .catch((err) => {
+        console.error('[SW] Cache installation failed:', err);
+      })
   );
   self.skipWaiting();
 });
 
-// Activate Service Worker
+// === ACTIVATE SERVICE WORKER ===
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...');
   event.waitUntil(
-    caches.keys().then((cacheNames) =>
-      Promise.all(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
         cacheNames.map((name) => {
-          // Hanya hapus cache lama yang berbeda versi
           if (name !== CACHE_NAME && name !== DATA_CACHE_NAME) {
-            console.log(`[SW] Deleting old cache: ${name}`);
+            console.log('[SW] Deleting old cache:', name);
             return caches.delete(name);
           }
-          return null;
-        }).filter(p => p !== null) 
-      )
-    )
+        })
+      );
+    })
   );
   self.clients.claim();
 });
 
-// Fetch Handler
+// === FETCH HANDLER (OFFLINE MODE) ===
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  
-  // Normalisasi URL untuk caching data API
-  const requestUrl = event.request.url.replace(`${self.location.origin}${BASE_PATH}`, self.location.origin);
 
-  // --- Strategy: Stale-While-Revalidate untuk Data API (/stories) ---
-  if (requestUrl.includes(STORY_API_URL) && !requestUrl.includes('push-subscribe')) {
+  const requestUrl = event.request.url;
+
+  // Strategy: Network First, fallback to Cache untuk API Stories
+  if (requestUrl.includes(STORY_API_URL)) {
     event.respondWith(
-      caches.open(DATA_CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(event.request); 
-        
-        const networkFetch = fetch(event.request)
-          .then(async (response) => {
-            // KRITIS: Respon dikloning sebelum di-cache.
-            const responseToCache = response.clone(); 
-            
-            if (response.status === 200 || response.type === 'opaque') {
-              await cache.put(event.request, responseToCache); 
-            }
-            // Mengembalikan respon asli yang belum dibaca bodynya
-            return response;
-          })
-          .catch((err) => {
-            console.log('[SW] Network failed for API:', err);
-            throw err; 
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(DATA_CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
           });
-        
-        if (cachedResponse) {
-             console.log('[SW] Serving from Data Cache');
-             return cachedResponse;
-        }
-        
-        // Fallback ke index.html di base path jika gagal
-        return networkFetch.catch(() => caches.match(BASE_PATH + '/index.html')); 
-      })
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+              console.log('[SW] Serving API from cache (OFFLINE)');
+              return cachedResponse;
+            }
+            return caches.match('/index.html');
+          });
+        })
     );
     return;
   }
 
-  // --- Strategy: Cache Falling Back to Network (Aset Statis) ---
+  // Strategy: Cache First, fallback to Network untuk aset statis
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
+        console.log('[SW] Serving from cache:', event.request.url);
         return cachedResponse;
       }
+
       return fetch(event.request)
-        .then((networkResponse) => {
-          const responseToCache = networkResponse.clone();
-          
-          if (networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
+        .then((response) => {
+          if (response.status === 200 && event.request.url.startsWith('http')) {
+            const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
+              cache.put(event.request, responseClone);
             });
           }
-          return networkResponse;
+          return response;
         })
-        // Fallback offline shell ke index.html di base path
-        .catch(() => caches.match(BASE_PATH + '/index.html')); 
+        .catch(() => {
+          console.log('[SW] Offline fallback to index.html');
+          return caches.match('/index.html');
+        });
     })
   );
 });
 
-// --- OFFLINE SYNC HANDLERS (Stub) ---
-// ... (Logika getOfflineStoriesSW, syncOfflineStories, dll. Dibiarkan kosong/stub di sini) ...
-// --- PUSH NOTIFICATION HANDLERS (Stub) ---
-// ... (Logika push dan notificationclick Dibiarkan kosong/stub di sini) ...
+// === INDEXEDDB HELPER ===
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+
+    request.onsuccess = (event) => {
+      resolve(event.target.result);
+    };
+
+    request.onerror = (event) => {
+      reject(event.target.error);
+    };
+  });
+}
+
+// === BACKGROUND SYNC HANDLER ===
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Sync event triggered:', event.tag);
+  
+  if (event.tag === 'sync-offline-stories') {
+    event.waitUntil(syncOfflineStories());
+  }
+});
+
+async function syncOfflineStories() {
+  console.log('[SW] Starting sync of offline stories...');
+  
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const allStories = await new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (allStories.length === 0) {
+      console.log('[SW] No offline stories to sync');
+      return;
+    }
+
+    // Get token from client
+    const token = await getTokenFromClient();
+    if (!token) {
+      console.error('[SW] No token available for sync');
+      return;
+    }
+
+    for (const story of allStories) {
+      try {
+        await uploadStoryToAPI(story, token);
+        await deleteOfflineStory(story.id);
+        console.log('[SW] Successfully synced story:', story.id);
+      } catch (err) {
+        console.error('[SW] Failed to sync story:', story.id, err);
+      }
+    }
+
+    console.log('[SW] Sync completed');
+  } catch (err) {
+    console.error('[SW] Sync failed:', err);
+  }
+}
+
+async function getTokenFromClient() {
+  const allClients = await self.clients.matchAll();
+  if (allClients.length === 0) return null;
+
+  return new Promise((resolve) => {
+    const messageChannel = new MessageChannel();
+    messageChannel.port1.onmessage = (event) => {
+      resolve(event.data.token);
+    };
+    allClients[0].postMessage({ type: 'REQUEST_TOKEN' }, [messageChannel.port2]);
+  });
+}
+
+async function uploadStoryToAPI(story, token) {
+  // Convert base64 to blob
+  const base64Data = story.photoBase64.split(',')[1];
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+  const formData = new FormData();
+  formData.append('description', story.description);
+  formData.append('photo', blob, 'photo.jpg');
+  if (story.lat) formData.append('lat', story.lat);
+  if (story.lon) formData.append('lon', story.lon);
+
+  const response = await fetch(STORY_API_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to upload story to API');
+  }
+
+  return response.json();
+}
+
+async function deleteOfflineStory(id) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  return new Promise((resolve, reject) => {
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// === PUSH NOTIFICATION HANDLERS ===
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
+  let notificationData = {
+    title: 'New Story',
+    body: 'A new story has been added!',
+    icon: BASE_PATH + '/icons/icon1.png',
+    badge: BASE_PATH + '/icons/icon1.png',
+  };
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      notificationData = {
+        title: data.title || notificationData.title,
+        body: data.body || notificationData.body,
+        icon: data.icon || notificationData.icon,
+        badge: data.badge || notificationData.badge,
+      };
+    } catch (e) {
+      notificationData.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked');
+  event.notification.close();
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        if (clientList.length > 0) {
+          return clientList[0].focus();
+        }
+        return self.clients.openWindow(BASE_PATH + '/');
+      })
+  );
+});

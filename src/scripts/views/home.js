@@ -1,6 +1,8 @@
+// src/scripts/views/home.js
 import { fetchStories } from '../services/api.js';
 import { initMap, addMarker, clearMarkers, openMarkerForId, fitMarkers } from '../services/map.js';
 import { createStoryCard } from '../components/story-card.js';
+import { saveStoryToIndexedDB, isStorySaved } from '../services/indexeddb.js';
 
 export default function Home() {
   const container = document.createElement('div');
@@ -11,36 +13,45 @@ export default function Home() {
   `;
 
   const listEl = container.querySelector('#story-list');
-
-  // loading state
   listEl.innerHTML = `<p>Loading stories...</p>`;
 
-  // --- Init map setelah container ada di DOM ---
+  // Simpan referensi stories untuk handler
+  let storiesData = [];
+
   setTimeout(() => {
     const map = initMap('map', { center: [-6.2, 106.8], zoom: 5 });
 
-    fetchStories().then((stories) => {
+    fetchStories().then(async (stories) => {
       if (!stories || stories.length === 0) {
         listEl.innerHTML = `<p>No stories available.</p>`;
         return;
       }
 
+      storiesData = stories;
       clearMarkers();
       listEl.innerHTML = '';
 
       for (const s of stories) {
-        // normalize id & coordinates
-        const id = s.id || s._id || s.key || Math.random().toString(36).slice(2,9);
+        const id = s.id || s._id || s.key || Math.random().toString(36).slice(2, 9);
         const lat = s.lat ?? s.latitude ?? (s.location && s.location.lat) ?? null;
         const lon = s.lon ?? s.longitude ?? (s.location && s.location.lon) ?? null;
         const title = s.title || s.name || 'Story';
         const desc = s.description || s.desc || '';
 
-        // create card
         const card = createStoryCard(Object.assign({}, s, { id }));
         listEl.appendChild(card);
 
-        // add marker if coords exist
+        // Update tombol Save jika sudah tersimpan
+        const saveBtn = card.querySelector('.btn-save-story');
+        if (saveBtn) {
+          const saved = await isStorySaved(id);
+          if (saved) {
+            saveBtn.textContent = '✅ Saved';
+            saveBtn.disabled = true;
+            saveBtn.style.background = '#4caf50';
+          }
+        }
+
         if (lat && lon) {
           const popupHtml = `<strong>${title}</strong><br>${desc}`;
           const marker = addMarker({ id, lat, lon, popupHtml });
@@ -61,15 +72,44 @@ export default function Home() {
     });
   }, 0);
 
-  // Delegate click on "Show on map" buttons
+  // Handler untuk tombol "Show on map"
   listEl.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.btn-show-map');
-    if (!btn) return;
-    const id = btn.getAttribute('data-story-id');
-    openMarkerForId(id);
-    document.querySelectorAll('.story-card.active').forEach((c) => c.classList.remove('active'));
-    const target = listEl.querySelector(`[data-story-id="${id}"]`);
-    if (target) target.classList.add('active');
+    const btnMap = ev.target.closest('.btn-show-map');
+    if (btnMap) {
+      const id = btnMap.getAttribute('data-story-id');
+      openMarkerForId(id);
+      document.querySelectorAll('.story-card.active').forEach((c) => c.classList.remove('active'));
+      const target = listEl.querySelector(`[data-story-id="${id}"]`);
+      if (target) target.classList.add('active');
+      return;
+    }
+
+    // Handler untuk tombol "Save"
+    const btnSave = ev.target.closest('.btn-save-story');
+    if (btnSave) {
+      const storyId = btnSave.getAttribute('data-story-id');
+      const story = storiesData.find(s => s.id === storyId);
+
+      if (!story) {
+        alert('Story not found');
+        return;
+      }
+
+      btnSave.disabled = true;
+      btnSave.textContent = 'Saving...';
+
+      saveStoryToIndexedDB(story)
+        .then(() => {
+          btnSave.textContent = '✅ Saved';
+          btnSave.style.background = '#4caf50';
+          alert('Story saved successfully! You can view it in the "Saved" page.');
+        })
+        .catch((err) => {
+          alert(`Failed to save: ${err.message}`);
+          btnSave.disabled = false;
+          btnSave.textContent = '💾 Save';
+        });
+    }
   });
 
   listEl.addEventListener('keydown', (ev) => {

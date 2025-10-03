@@ -6,31 +6,31 @@ Reset & Base Styles
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  }
+}
 
 html, body {
-margin: 0;
-padding: 0;
-height: 100%;
-display: flex;
-flex-direction: column;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 body {
-font-family: 'Poppins', Arial, sans-serif;
-background: #f7f9fc;
-color: #333;
-line-height: 1.6;
+  font-family: 'Poppins', Arial, sans-serif;
+  background: #f7f9fc;
+  color: #333;
+  line-height: 1.6;
 }
 
 #app {
-flex: 1;
-display: flex;
-flex-direction: column;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 main {
-flex: 1;
+  flex: 1;
 }
 
 /* ==========================
@@ -84,307 +84,417 @@ flex: 1;
   padding-right: 5px;
 }
 
+/* Push Notification Button */
+#btn-push-toggle {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+#btn-push-toggle:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a6fd8, #6a4192);
+  border-color: rgba(255,255,255,0.5);
+  transform: translateY(-1px);
+}
+
+#btn-push-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#btn-push-toggle.active {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border-color: #4CAF50;
+}
+
+#btn-push-toggle.active:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+}
+
 /* ==========================
 Skip Link (Aksesibilitas)
 ========================== */
 .skip-link {
-position: absolute;
-top: -40px;
-left: 0;
-background: #000;
-color: #fff;
-padding: 8px;
-z-index: 100;
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  z-index: 100;
 }
+
 .skip-link:focus {
-top: 0;
+  top: 0;
 }
 
 /* ==========================
 Footer (samain sama navbar)
 ========================== */
 .footer {
-background: linear-gradient(135deg, #667eea, #764ba2);
-color: #fff;
-text-align: center;
-padding: 1rem;
-margin-top: auto;
-font-size: 14px;
-border-top: 2px solid rgba(255,255,255,0.1);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  text-align: center;
+  padding: 1rem;
+  margin-top: auto;
+  font-size: 14px;
+  border-top: 2px solid rgba(255,255,255,0.1);
 }
 
 /* ==========================
 Story Cards
 ========================== */
 .story-card {
-display: flex;
-flex-direction: column;
-justify-content: space-between;
-background: white;
-border-radius: 12px;
-padding: 1rem;
-margin-bottom: 1rem;
-box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-transition: transform 0.3s ease, box-shadow 0.3s ease;
-animation: fadeIn 0.4s ease;
-min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: fadeIn 0.4s ease;
+  min-height: 380px;
 }
 
 .story-card img {
-width: 100%;
-height: 200px;
-object-fit: cover;
-border-radius: 8px;
-margin-bottom: 0.5rem;
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
 }
 
 .story-card .text-content {
-flex-grow: 1;
-margin: 8px 0;
-overflow-y: auto;
-max-height: 100px;
+  flex-grow: 1;
+  margin: 8px 0;
+  overflow-y: auto;
+  max-height: 100px;
 }
 
 .story-card:hover {
-transform: translateY(-5px);
-box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 
 .story-card .btn-show-map {
-margin-top: auto;
-align-self: stretch;
-text-align: center;
+  margin-top: auto;
+  align-self: stretch;
+  text-align: center;
+}
+
+/* Story Card Active State (highlight saat diklik dari map) */
+.story-card.active {
+  border: 2px solid #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 /* ==========================
 Story Actions
 ========================== */
 .story-actions {
-margin-top: 8px;
+  margin-top: 8px;
 }
+
 .btn-show-map {
-background: linear-gradient(135deg, #667eea, #764ba2);
-color: #fff;
-border: none;
-padding: 8px 12px;
-border-radius: 6px;
-cursor: pointer;
-font-weight: 500;
-transition: all 0.3s ease;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
+
 .btn-show-map:hover {
-opacity: 0.9;
-transform: translateY(-2px);
+  opacity: 0.9;
+  transform: translateY(-2px);
 }
+
 .btn-show-map:focus {
-outline: 3px solid #a6d8ff;
+  outline: 3px solid #a6d8ff;
 }
 
 /* ==========================
 Story Form (Add Story page)
 ========================== */
 .story-form {
-display: grid;
-gap: 16px;
-max-width: 520px;
-margin: 40px auto;
-background: #fff;
-padding: 24px;
-border-radius: 12px;
-box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  display: grid;
+  gap: 16px;
+  max-width: 520px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
 }
 
 .story-form label {
-display: flex;
-flex-direction: column;
-font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
 }
 
 .story-form input,
 .story-form textarea,
 .story-form button {
-margin-top: 4px;
-padding: 10px;
-font-size: 1rem;
-border-radius: 8px;
+  margin-top: 4px;
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 8px;
 }
 
 .story-form input,
 .story-form textarea {
-border: 1px solid #ccc;
+  border: 1px solid #ccc;
 }
 
 .story-form button {
-background: linear-gradient(135deg, #667eea, #764ba2);
-color: white;
-border: none;
-cursor: pointer;
-font-weight: 500;
-transition: all 0.3s ease;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .story-form button:hover {
-opacity: 0.9;
-transform: translateY(-2px);
+  opacity: 0.9;
+  transform: translateY(-2px);
 }
 
 .form-msg {
-font-size: 0.9rem;
-font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 /* ==========================
 Auth Pages
 ========================== */
 .auth-page {
-max-width: 400px;
-margin: 40px auto;
-padding: 24px;
-background: #fff;
-border-radius: 14px;
-box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-animation: fadeIn 0.4s ease;
+  max-width: 400px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  animation: fadeIn 0.4s ease;
 }
 
 .auth-page h1 {
-margin-bottom: 20px;
-font-size: 24px;
-text-align: center;
-color: #444;
+  margin-bottom: 20px;
+  font-size: 24px;
+  text-align: center;
+  color: #444;
 }
 
 .auth-form {
-display: flex;
-flex-direction: column;
-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .auth-form label {
-display: flex;
-flex-direction: column;
-font-weight: 500;
-font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  font-size: 14px;
 }
 
 .auth-form input {
-margin-top: 4px;
-padding: 10px;
-font-size: 14px;
-border: 1px solid #ccc;
-border-radius: 8px;
+  margin-top: 4px;
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 
 .auth-form button {
-padding: 12px;
-font-size: 16px;
-background: linear-gradient(135deg, #667eea, #764ba2);
-color: white;
-border: none;
-border-radius: 8px;
-cursor: pointer;
-transition: all 0.3s ease;
+  padding: 12px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .auth-form button:hover {
-opacity: 0.9;
-transform: translateY(-2px);
+  opacity: 0.9;
+  transform: translateY(-2px);
 }
 
 .auth-message {
-margin-top: 12px;
-font-size: 14px;
-text-align: center;
-color: #cc0000;
+  margin-top: 12px;
+  font-size: 14px;
+  text-align: center;
+  color: #cc0000;
 }
 
 /* ==========================
 Story List Layout
 ========================== */
 .story-list {
-display: grid;
-grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-gap: 16px;
-margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 
-.story-card.active {
-outline: 3px solid #667eea;
-box-shadow: 0 2px 12px rgba(102,126,234,0.3);
+/* ==========================
+Favorite Page Styles
+========================== */
+.btn-refresh {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-refresh:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.btn-refresh:active {
+  opacity: 0.8;
+  transform: translateY(0);
+}
+
+.favorite-card-container {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.btn-delete-favorite {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 8px 12px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-delete-favorite:hover {
+  background-color: #d32f2f;
+  transform: scale(1.05);
+}
+
+.btn-delete-favorite:active {
+  background-color: #c62828;
+  transform: scale(0.98);
 }
 
 /* ==========================
 Map
 ========================== */
 #map {
-width: 100%;
-min-height: 300px;
-border-radius: 12px;
-overflow: hidden;
-box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-margin-top: 10px;
+  width: 100%;
+  min-height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  margin-top: 10px;
 }
 
 /* ==========================
 Responsive
 ========================== */
 @media (max-width: 768px) {
-.navbar {
-flex-wrap: wrap;
-justify-content: center;
-gap: 10px;
-}
+  .navbar {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .navbar-right-actions {
+    margin-left: 0;
+  }
+  
+  .story-list {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
 }
 
 @media (max-width: 375px) {
-body {
-font-size: 14px;
-}
-.navbar {
-padding: 0.5rem;
-}
+  body {
+    font-size: 14px;
+  }
+  
+  .navbar {
+    padding: 0.5rem;
+  }
+  
+  .story-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ==========================
 Animations
 ========================== */
 @keyframes fadeIn {
-from { opacity: 0; transform: translateY(8px); }
-to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeDown {
-from { opacity: 0; transform: translateY(-20px); }
-to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ==========================
 View Transition API
 ========================== */
 #main-content {
-view-transition-name: page-transition;
-opacity: 1;
-transition: opacity 0.4s ease-in;
-padding: 2rem;
+  view-transition-name: page-transition;
+  opacity: 1;
+  transition: opacity 0.4s ease-in;
+  padding: 2rem;
 }
 
 ::view-transition-old(#main-content),
 ::view-transition-new(#main-content) {
-animation-duration: 360ms;
-animation-timing-function: cubic-bezier(.2,.9,.2,1);
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(.2,.9,.2,1);
 }
 
 ::view-transition-old(#main-content) {
-animation-name: vt-fade-out;
+  animation-name: vt-fade-out;
 }
+
 ::view-transition-new(#main-content) {
-animation-name: vt-fade-in;
+  animation-name: vt-fade-in;
 }
 
 @keyframes vt-fade-out {
-from { opacity: 1; transform: translateY(0); }
-to   { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
 }
+
 @keyframes vt-fade-in {
-from { opacity: 0; transform: translateY(6px); }
-to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

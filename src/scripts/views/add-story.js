@@ -40,7 +40,7 @@ export default function AddStory() {
     </form>
   `;
 
-  // === HELPER: Ubah File menjadi Base64 (untuk penyimpanan offline) ===
+  // === HELPER: Ubah File menjadi Base64 ===
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -71,7 +71,7 @@ export default function AddStory() {
       });
     }
 
-    // === HANDLE FORM SUBMIT (Online/Offline Sync) ===
+    // === HANDLE FORM SUBMIT ===
     const form = container.querySelector('#story-form');
     const msgEl = container.querySelector('#form-msg');
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -94,53 +94,57 @@ export default function AddStory() {
       if (lon) formData.append('lon', lon);
 
       try {
-        // Coba kirim langsung ke API (Online/Network-First)
+        // Coba kirim langsung ke API (Online)
         await addStory(formData);
-        msgEl.textContent = '✅ Story added successfully online! Redirecting...';
+        msgEl.textContent = '✅ Story added successfully! Redirecting...';
         msgEl.style.color = 'green';
+        
+        form.reset();
+        clearMarkers();
+        latInput.value = '';
+        lonInput.value = '';
+        
         setTimeout(() => window.location.hash = '#/home', 1000);
 
       } catch (err) {
-        // Jika gagal (kemungkinan Offline/Network Error), simpan ke IndexedDB
-        console.warn('Network submit failed, attempting to save to IndexedDB:', err.message);
+        // Jika gagal (Offline), simpan ke IndexedDB
+        console.warn('Network submit failed, saving to IndexedDB:', err.message);
 
         try {
           const photoBase64 = await fileToBase64(photoFile);
 
           const storyData = {
             description: description,
-            photoBase64: photoBase64, // Simpan sebagai Base64
+            photoBase64: photoBase64,
             lat: lat ? parseFloat(lat) : null,
             lon: lon ? parseFloat(lon) : null,
+            createdAt: new Date().toISOString(),
           };
 
           await addOfflineStory(storyData);
-          const registration = await navigator.serviceWorker.ready;
 
           // Request Background Sync
-          if ('sync' in registration) {
+          if ('serviceWorker' in navigator && 'sync' in await navigator.serviceWorker.ready) {
+            const registration = await navigator.serviceWorker.ready;
             await registration.sync.register('sync-offline-stories');
-            msgEl.textContent = '💾 Offline saved! Will sync when online. Redirecting...';
-            msgEl.style.color = 'orange';
+            msgEl.textContent = '💾 Saved offline! Will sync when online. Check Favorite page.';
           } else {
-            msgEl.textContent = '💾 Offline saved! Sync will happen when the app is next visited online. Redirecting...';
-            msgEl.style.color = 'orange';
+            msgEl.textContent = '💾 Saved offline! Visit Favorite page to see saved stories.';
           }
           
-          setTimeout(() => window.location.hash = '#/home', 1500);
-
-        } catch (dbErr) {
-          msgEl.textContent = `❌ Critical Error: Failed to save offline: ${dbErr.message}`;
-          msgEl.style.color = 'red';
-          submitBtn.disabled = false;
-        }
-      } finally {
-        // Bersihkan form jika berhasil online/offline save
-        if (msgEl.style.color !== 'red') {
+          msgEl.style.color = 'orange';
+          
           form.reset();
           clearMarkers();
           latInput.value = '';
           lonInput.value = '';
+          
+          setTimeout(() => window.location.hash = '#/favorite', 1500);
+
+        } catch (dbErr) {
+          msgEl.textContent = `❌ Failed to save: ${dbErr.message}`;
+          msgEl.style.color = 'red';
+          submitBtn.disabled = false;
         }
       }
     });

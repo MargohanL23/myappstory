@@ -1,4 +1,5 @@
 import { login } from '../services/api.js';
+import { initPushNotification } from '../app.js'; 
 
 export default function Login() {
   const container = document.createElement('div');
@@ -45,6 +46,10 @@ export default function Login() {
       localStorage.setItem('name', data.loginResult.name);
 
       messageEl.textContent = 'Login successful! Redirecting...';
+      
+      // Setelah login, coba inisialisasi status push.
+      // initPushNotification(true); // Panggil ini jika di-export
+
       setTimeout(() => {
         window.location.hash = '#/home';
       }, 1000);

@@ -6,36 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyStory App</title>
     
-    <!-- KRITIS: Memastikan manifest menunjuk ke base path yang benar -->
-    <link rel="manifest" href="/myappstory/manifest.json">
-    
-    <!-- KRITIS: Menghapus atau Mengoreksi link favicon/icon lama jika ada -->
-    <!-- Jika kamu memiliki link icon secara manual, pastikan path-nya benar (misalnya icon1.png) -->
-    <link rel="icon" href="/myappstory/icons/icon1.png"> 
-
-    <!-- Tambahan: memastikan tema dan Apple icon (jika perlu) -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon1.png"> 
     <meta name="theme-color" content="#673AB7"/>
-    <link rel="apple-touch-icon" href="/myappstory/icons/icon1.png">
-    
-    <!-- Registrasi Service Worker -->
-    <script>
-      // Fungsi untuk mendaftarkan Service Worker
-      function registerServiceWorker() {
-        if ('serviceWorker' in navigator) {
-          // Path harus menunjuk ke file SW di root docs/
-          navigator.serviceWorker.register('/myappstory/service-worker.js')
-            .then(registration => {
-              console.log('ServiceWorker registered:', registration);
-            })
-            .catch(error => {
-              console.error('ServiceWorker registration failed:', error);
-            });
-        }
-      }
-
-      // Jalankan registrasi setelah halaman dimuat
-      window.addEventListener('load', registerServiceWorker);
-    </script>
+    <link rel="apple-touch-icon" href="icons/icon1.png">
 </head>
 <body>
     <div id="app"></div>
