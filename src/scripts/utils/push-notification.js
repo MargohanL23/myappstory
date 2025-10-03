@@ -35,27 +35,29 @@ const sendSubscriptionToServer = async (subscription, action) => {
     throw new Error('Unauthorized: No login token found.');
   }
 
-  // FIX: Path API benar
   const apiPath = 'notifications/subscribe';
   const method = action === 'subscribe' ? 'POST' : 'DELETE';
 
-  // FIX UTAMA: convert ke JSON dan hapus expirationTime
+  // Konversi ke JSON + hapus expirationTime
   const subJson = subscription.toJSON ? subscription.toJSON() : subscription;
   const cleanedSubscription = { ...subJson };
   delete cleanedSubscription.expirationTime;
+
+  console.log(`Sending subscription for ${action}:`, cleanedSubscription);
 
   try {
     const response = await fetch(`${BASE_URL}/${apiPath}`, {
       method,
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: method === 'POST' ? JSON.stringify(cleanedSubscription) : undefined,
+      // Kirim body untuk POST maupun DELETE
+      body: JSON.stringify(cleanedSubscription),
     });
 
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.message || `Failed to ${action} subscription to server`);
     }
