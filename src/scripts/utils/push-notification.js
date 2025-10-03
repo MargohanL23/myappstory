@@ -36,43 +36,37 @@ const sendSubscriptionToServer = async (subscription, action) => {
     throw new Error('Unauthorized: No login token found.');
   }
   
-  // PERBAIKAN 1: Menggunakan path yang benar dari dokumentasi API: notifications/subscribe
+  // FIX: Menggunakan path yang benar: notifications/subscribe
   const apiPath = 'notifications/subscribe';
   
-  // PERBAIKAN 2: Menentukan Method berdasarkan action
+  // FIX: Menentukan Method (DELETE untuk unsubscribe, POST untuk subscribe)
   const method = action === 'subscribe' ? 'POST' : 'DELETE';
 
+  // FIX UTAMA: Menghapus 'expirationTime' dari body (API Dicoding melarangnya)
+  const cleanedSubscription = { ...subscription };
+  if (cleanedSubscription.expirationTime) {
+    delete cleanedSubscription.expirationTime;
+  }
+  
   try {
-    // URL yang benar sekarang adalah: ${BASE_URL}/notifications/subscribe
     const response = await fetch(`${BASE_URL}/${apiPath}`, {
-      // Menggunakan method yang benar (POST untuk subscribe, DELETE untuk unsubscribe)
       method: method, 
       headers: {
         'Content-Type': 'application/json',
-        // Tambahkan Accept sebagai solusi potensial CORS
-        'Accept': 'application/json', 
+        'Accept': 'application/json', // Opsional, tapi disarankan
         Authorization: `Bearer ${token}`,
       },
-      // Body hanya diperlukan untuk POST/PUT. Kita tetap kirim untuk DELETE
-      // karena API meminta 'endpoint' di Request Body.
-      body: JSON.stringify(subscription),
+      // Menggunakan objek yang sudah 'dibersihkan'
+      body: JSON.stringify(cleanedSubscription),
     });
 
-    // Karena unsubscribe menggunakan DELETE dan kemungkinan tidak mengembalikan body JSON,
-    // kita perlu sedikit modifikasi penanganan response.
-    if (response.status === 204 || method === 'DELETE') {
-        // Asumsi API mengembalikan 204 (No Content) atau sukses tanpa body untuk DELETE
-        // atau kita akan mem-parse body-nya jika ada.
-        if (!response.ok) {
-           // Jika DELETE gagal, coba parse response
-           const errorData = await response.json().catch(() => ({})); 
-           throw new Error(errorData.message || `Failed to ${action} subscription to server`);
-        }
+    if (method === 'DELETE' && response.ok) {
+        // Penanganan sukses untuk DELETE
         console.log(`Subscription ${action} sent to server successfully!`);
         return {};
     }
 
-    // Untuk POST (subscribe), kita parse JSON
+    // Untuk POST atau penanganan error
     const data = await response.json();
 
     if (!response.ok) {
