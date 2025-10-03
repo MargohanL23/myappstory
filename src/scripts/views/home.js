@@ -1,4 +1,4 @@
-// src/scripts/views/home.js
+// src/scripts/views/home.js (KODE SAMA SEPERTI SEBELUMNYA)
 import { fetchStories } from '../services/api.js';
 import { initMap, addMarker, clearMarkers, openMarkerForId, fitMarkers } from '../services/map.js';
 import { createStoryCard } from '../components/story-card.js';
@@ -15,7 +15,6 @@ export default function Home() {
   const listEl = container.querySelector('#story-list');
   listEl.innerHTML = `<p>Loading stories...</p>`;
 
-  // Simpan referensi stories untuk handler
   let storiesData = [];
 
   setTimeout(() => {
@@ -102,7 +101,8 @@ export default function Home() {
         .then(() => {
           btnSave.textContent = '✅ Saved';
           btnSave.style.background = '#4caf50';
-          alert('Story saved successfully! You can view it in the "Saved" page.');
+          // Kita tidak perlu memanggil alert karena Ikon Hati sudah melakukan CRUD
+          // alert('Story saved successfully! You can view it in the "Saved" page.');
         })
         .catch((err) => {
           alert(`Failed to save: ${err.message}`);
