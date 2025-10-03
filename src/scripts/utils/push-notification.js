@@ -31,42 +31,29 @@ export const getSubscription = async () => {
 // Kirim subscription ke server
 const sendSubscriptionToServer = async (subscription, action) => {
   const token = localStorage.getItem('token');
-  
   if (!token) {
     throw new Error('Unauthorized: No login token found.');
   }
-  
-  // FIX: Menggunakan path yang benar: notifications/subscribe
+
+  // FIX: Path API benar
   const apiPath = 'notifications/subscribe';
-  
-  // FIX: Menentukan Method (DELETE untuk unsubscribe, POST untuk subscribe)
   const method = action === 'subscribe' ? 'POST' : 'DELETE';
 
-  // FIX UTAMA: Menghapus 'expirationTime' dari body (API Dicoding melarangnya)
-  const cleanedSubscription = { ...subscription };
-  if (cleanedSubscription.expirationTime) {
-    delete cleanedSubscription.expirationTime;
-  }
-  
+  // FIX UTAMA: convert ke JSON dan hapus expirationTime
+  const subJson = subscription.toJSON ? subscription.toJSON() : subscription;
+  const cleanedSubscription = { ...subJson };
+  delete cleanedSubscription.expirationTime;
+
   try {
     const response = await fetch(`${BASE_URL}/${apiPath}`, {
-      method: method, 
+      method,
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json', // Opsional, tapi disarankan
         Authorization: `Bearer ${token}`,
       },
-      // Menggunakan objek yang sudah 'dibersihkan'
-      body: JSON.stringify(cleanedSubscription),
+      body: method === 'POST' ? JSON.stringify(cleanedSubscription) : undefined,
     });
 
-    if (method === 'DELETE' && response.ok) {
-        // Penanganan sukses untuk DELETE
-        console.log(`Subscription ${action} sent to server successfully!`);
-        return {};
-    }
-
-    // Untuk POST atau penanganan error
     const data = await response.json();
 
     if (!response.ok) {
@@ -83,7 +70,6 @@ const sendSubscriptionToServer = async (subscription, action) => {
 
 // Subscribe ke push notification
 export const subscribePush = async () => {
-  // Cek support browser
   if (!('Notification' in window)) {
     throw new Error('This browser does not support notifications.');
   }
@@ -96,27 +82,20 @@ export const subscribePush = async () => {
     throw new Error('This browser does not support push notifications.');
   }
 
-  // Cek apakah user sudah login
   const token = localStorage.getItem('token');
   if (!token) {
     throw new Error('Please login first to enable notifications.');
   }
 
-  // Request permission
   const permission = await Notification.requestPermission();
-  
   if (permission !== 'granted') {
     throw new Error('Notification permission denied.');
   }
 
   try {
-    // Tunggu service worker ready
     const registration = await navigator.serviceWorker.ready;
-
-    // Cek apakah sudah subscribe
     let subscription = await registration.pushManager.getSubscription();
 
-    // Jika belum subscribe, buat subscription baru
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
@@ -127,9 +106,7 @@ export const subscribePush = async () => {
       console.log('Already subscribed to push');
     }
 
-    // Kirim subscription ke server
-    await sendSubscriptionToServer(subscription.toJSON(), 'subscribe');
-
+    await sendSubscriptionToServer(subscription, 'subscribe');
     console.log('Push notification enabled successfully');
     return subscription;
   } catch (error) {
@@ -148,10 +125,7 @@ export const unsubscribePush = async () => {
       return true;
     }
 
-    // Kirim unsubscribe ke server dulu (menggunakan DELETE)
-    await sendSubscriptionToServer(subscription.toJSON(), 'unsubscribe');
-
-    // Lalu unsubscribe dari browser
+    await sendSubscriptionToServer(subscription, 'unsubscribe');
     const success = await subscription.unsubscribe();
 
     if (!success) {
