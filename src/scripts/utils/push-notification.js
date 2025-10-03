@@ -35,21 +35,44 @@ const sendSubscriptionToServer = async (subscription, action) => {
   if (!token) {
     throw new Error('Unauthorized: No login token found.');
   }
-
-  // PERBAIKAN DI SINI: Mengubah 'push-subscribe' menjadi 'subscribe'
-  // dan 'push-unsubscribe' menjadi 'unsubscribe' sesuai API Dicoding.
-  const endpoint = action === 'subscribe' ? 'subscribe' : 'unsubscribe';
+  
+  // PERBAIKAN 1: Menggunakan path yang benar dari dokumentasi API: notifications/subscribe
+  const apiPath = 'notifications/subscribe';
+  
+  // PERBAIKAN 2: Menentukan Method berdasarkan action
+  const method = action === 'subscribe' ? 'POST' : 'DELETE';
 
   try {
-    const response = await fetch(`${BASE_URL}/${endpoint}`, {
-      method: 'POST',
+    // URL yang benar sekarang adalah: ${BASE_URL}/notifications/subscribe
+    const response = await fetch(`${BASE_URL}/${apiPath}`, {
+      // Menggunakan method yang benar (POST untuk subscribe, DELETE untuk unsubscribe)
+      method: method, 
       headers: {
         'Content-Type': 'application/json',
+        // Tambahkan Accept sebagai solusi potensial CORS
+        'Accept': 'application/json', 
         Authorization: `Bearer ${token}`,
       },
+      // Body hanya diperlukan untuk POST/PUT. Kita tetap kirim untuk DELETE
+      // karena API meminta 'endpoint' di Request Body.
       body: JSON.stringify(subscription),
     });
 
+    // Karena unsubscribe menggunakan DELETE dan kemungkinan tidak mengembalikan body JSON,
+    // kita perlu sedikit modifikasi penanganan response.
+    if (response.status === 204 || method === 'DELETE') {
+        // Asumsi API mengembalikan 204 (No Content) atau sukses tanpa body untuk DELETE
+        // atau kita akan mem-parse body-nya jika ada.
+        if (!response.ok) {
+           // Jika DELETE gagal, coba parse response
+           const errorData = await response.json().catch(() => ({})); 
+           throw new Error(errorData.message || `Failed to ${action} subscription to server`);
+        }
+        console.log(`Subscription ${action} sent to server successfully!`);
+        return {};
+    }
+
+    // Untuk POST (subscribe), kita parse JSON
     const data = await response.json();
 
     if (!response.ok) {
@@ -131,7 +154,7 @@ export const unsubscribePush = async () => {
       return true;
     }
 
-    // Kirim unsubscribe ke server dulu
+    // Kirim unsubscribe ke server dulu (menggunakan DELETE)
     await sendSubscriptionToServer(subscription.toJSON(), 'unsubscribe');
 
     // Lalu unsubscribe dari browser
