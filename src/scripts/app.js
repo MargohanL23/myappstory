@@ -42,8 +42,8 @@ document.addEventListener('DOMContentLoaded', init);
 // Register service worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Service Worker disalin ke root folder output (docs), jadi didaftarkan di root
-    navigator.serviceWorker.register('/service-worker.js') 
+    // FIX: Menggunakan jalur relatif ('./service-worker.js') untuk kompatibilitas GitHub Pages sub-direktori
+    navigator.serviceWorker.register('./service-worker.js') 
       .then((registration) => {
         console.log('ServiceWorker registered:', registration);
       })
