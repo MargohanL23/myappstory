@@ -1,3 +1,5 @@
+// webpack.config.js
+
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -8,7 +10,8 @@ module.exports = (env, argv) => {
   return {
     entry: "./src/scripts/app.js",
     output: {
-      publicPath: isProduction ? '/myappstory/' : '/', 
+      publicPath: './', 
+      
       path: path.resolve(__dirname, "docs"),
       filename: "bundle.js",
       clean: true,
