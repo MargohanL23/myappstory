@@ -11,6 +11,21 @@ const urlBase64ToUint8Array = (base64String) => {
 
 const VAPID_UINT8 = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
 
+const toPlainSubscription = (subscription) => {
+  // Jika PushSubscription object, convert ke JSON
+  if (!subscription) return {};
+  if (typeof subscription.toJSON === 'function') {
+    try {
+      return subscription.toJSON();
+    } catch (e) {
+      console.warn('toJSON() failed on subscription, falling back to raw object', e);
+      return subscription;
+    }
+  }
+  // sudah plain object
+  return subscription;
+};
+
 // Cek apakah sudah subscribe
 export const getSubscription = async () => {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -37,24 +52,33 @@ const sendSubscriptionToServer = async (subscription, action) => {
   const apiPath = 'notifications/subscribe';
   const method = action === 'subscribe' ? 'POST' : 'DELETE';
 
-  // Konversi ke JSON bila perlu
-  const subJson = subscription && subscription.toJSON ? subscription.toJSON() : subscription || {};
-
-  // Hapus field yang tidak diizinkan seperti expirationTime
-  const cleanedSubscription = { ...subJson };
-  if ('expirationTime' in cleanedSubscription) {
-    delete cleanedSubscription.expirationTime;
-  }
+  // Konversi ke plain object
+  const subJson = toPlainSubscription(subscription);
+  // Hapus field yang tidak diizinkan
+  if ('expirationTime' in subJson) delete subJson.expirationTime;
 
   // Siapkan payload:
-  // - Untuk subscribe (POST): kirim seluruh cleanedSubscription
-  // - Untuk unsubscribe (DELETE): kirim hanya { endpoint } agar backend tidak menolak "keys"
-  const payload =
-    method === 'POST'
-      ? cleanedSubscription
-      : { endpoint: cleanedSubscription.endpoint };
+  // - subscribe (POST): kirim seluruh subscription (server butuh keys)
+  // - unsubscribe (DELETE): kirim **HANYA** endpoint (server menolak "keys")
+  let payload;
+  if (method === 'POST') {
+    payload = subJson;
+  } else {
+    // pastikan hanya endpoint dikirim
+    payload = { endpoint: subJson.endpoint };
+  }
 
-  console.log(`Sending subscription for ${action}:`, payload);
+  // Defensive: remove unexpected props for DELETE
+  if (method === 'DELETE') {
+    // pastikan tidak ada keys, auth, p256dh, atau anything else
+    if ('keys' in payload) delete payload.keys;
+    if ('auth' in payload) delete payload.auth;
+    if ('p256dh' in payload) delete payload.p256dh;
+  }
+
+  // Logging stringified agar jelas apa yang dikirim
+  console.log(`[push] subJson (raw):`, JSON.stringify(subJson));
+  console.log(`[push] payload to send (${method}):`, JSON.stringify(payload));
 
   try {
     const response = await fetch(`${BASE_URL}/${apiPath}`, {
@@ -67,19 +91,15 @@ const sendSubscriptionToServer = async (subscription, action) => {
       body: JSON.stringify(payload),
     });
 
-    // Tangkap body respons (jika ada)
     let data = null;
     try {
       data = await response.json();
     } catch (e) {
-      // respons bukan JSON atau kosong
       data = null;
     }
 
     if (!response.ok) {
-      // Beri pesan error lebih jelas ketika tersedia pada response
-      const errMsg =
-        (data && (data.message || data.error || JSON.stringify(data))) ||
+      const errMsg = (data && (data.message || data.error || JSON.stringify(data))) ||
         `Failed to ${action} subscription to server (status ${response.status})`;
       throw new Error(errMsg);
     }
